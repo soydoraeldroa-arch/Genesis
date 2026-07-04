@@ -33,6 +33,15 @@ SECRET_PATTERNS = {
 # they don't masquerade as real leaks.
 PUBLISHABLE_HINTS = ("pk_live_", "pk_test_", "AIza")  # Stripe publishable, Google browser keys
 
+# Substrings that mark a match as a placeholder/redaction/masking token rather
+# than a real credential. Driven by real false positives (e.g. session-replay
+# libraries that set password="%filtered%" to *redact* values).
+PLACEHOLDER_MARKERS = (
+    "%filtered%", "filtered", "redacted", "masked", "example", "your_", "changeme",
+    "xxxx", "placeholder", "dummy", "null", "undefined", "{{", "}}", "${", "%s", "%d",
+    "*****", "......",
+)
+
 SCRIPT_SRC_RE = re.compile(r'<script[^>]+src=["\']([^"\']+)["\']', re.IGNORECASE)
 
 
@@ -69,6 +78,9 @@ def scan_js_secrets(base_url: str, max_scripts: int = 15, timeout: int = 8) -> l
             if not m:
                 continue
             snippet = m.group(0)
+            # Skip obvious placeholder/redaction tokens (not real secrets).
+            if any(marker in snippet.lower() for marker in PLACEHOLDER_MARKERS):
+                continue
             is_publishable = any(h in snippet for h in PUBLISHABLE_HINTS)
             findings.append({
                 "check": "client_side_secret",

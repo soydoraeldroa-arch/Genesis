@@ -32,7 +32,6 @@ SENSITIVE_PATHS = [
     "/backup.zip",
     "/.DS_Store",
     "/server-status",
-    "/.well-known/security.txt",
     "/debug",
     "/actuator/env",
     "/actuator/health",
