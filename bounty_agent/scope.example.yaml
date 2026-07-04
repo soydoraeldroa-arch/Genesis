@@ -1,0 +1,34 @@
+# Copy this file to scope.yaml (or any name) and fill it in for the ONE program
+# you are actually enrolled in and testing against. The agent refuses to send
+# a single request to a target host until this file says confirmed: true.
+#
+# Where to get these values: your program's page on HackerOne / Bugcrowd /
+# Intigriti has a "Scope" or "Structured scope" tab listing exactly which
+# domains/assets are in scope and out of scope, plus any special rules
+# (rate limits, no automated scanning, etc). Copy that list here verbatim.
+# If a program disallows automated tools entirely, do not use this tool
+# against it — read the policy, it overrides everything below.
+
+program_name: "REPLACE_ME (exact program name as listed on the platform)"
+platform: "hackerone"   # hackerone | bugcrowd | intigriti
+authorized_by: "REPLACE_ME (your bounty platform username/handle)"
+
+# Wildcards allowed, e.g. "*.example.com"
+in_scope:
+  - "REPLACE_ME.example.com"
+
+out_of_scope:
+  - "REPLACE_ME-staging.example.com"
+
+# Extra rules the program specifies (rate limits, disallowed test types,
+# blackout windows). The agent doesn't parse this, it's here so it travels
+# with the scope file and shows up in generated reports.
+program_notes: >
+  REPLACE_ME: e.g. "Max 1 req/sec. No automated scanners without prior
+  approval. Social engineering, physical, and DoS testing out of scope."
+
+# You must change this to true by hand. This is the actual gate: it means
+# you have personally verified the in_scope list above against the
+# program's current published scope, and you are an enrolled/authorized
+# participant in that program.
+confirmed: false

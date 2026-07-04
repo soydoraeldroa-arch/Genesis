@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+bounty_agent/scope.yaml
+bounty_agent/*_output/
+bounty_agent/results/
