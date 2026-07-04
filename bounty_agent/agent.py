@@ -23,6 +23,32 @@ from pathlib import Path
 from modules import active, passive, recon, report
 from modules.scope import ScopeError, is_in_scope, load_scope
 
+# Findings the X/xAI program's published policy explicitly lists as
+# ineligible/not-reportable. Generated but filed separately so effort isn't
+# wasted chasing something the program has already said it won't reward.
+POLICY_INELIGIBLE = {
+    "missing_security_header": (
+        "Policy: 'Issues without clearly identified security impact, such as "
+        "clickjacking on a static website, missing security headers, or "
+        "descriptive error messages' are listed as ineligible."
+    ),
+}
+
+# Findings that are conditionally eligible -- still worth a look, but the
+# draft report gets a banner instead of being presented as submission-ready.
+POLICY_CONDITIONAL = {
+    "open_redirect": (
+        "Policy: 'Open redirects unless they can demonstrate a higher security "
+        "risk than phishing' are ineligible. Do not submit unless you can chain "
+        "this into something with greater impact."
+    ),
+}
+
+# Hosts the program has asked not to receive reports about a specific known
+# behavior; t.co is a redirector by design and the policy says reports about
+# its redirect behavior aren't being accepted.
+ACTIVE_CHECK_EXCLUDED_HOSTS = {"t.co"}
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -89,7 +115,7 @@ def main() -> int:
             all_findings += passive.check_sensitive_paths(base_url, delay=args.delay)
             all_findings += passive.check_cors(base_url)
 
-            if args.active:
+            if args.active and host not in ACTIVE_CHECK_EXCLUDED_HOSTS:
                 all_findings += active.check_reflected_input(base_url)
                 all_findings += active.check_open_redirect(base_url)
 
@@ -99,12 +125,33 @@ def main() -> int:
     findings_path.write_text(json.dumps(all_findings, indent=2, default=str))
     print(f"[*] {len(all_findings)} finding(s) written to {findings_path}")
 
-    for i, finding in enumerate(all_findings):
-        md = report.render_report(finding, scope, platform=scope.platform)
-        check = finding.get("check", "unknown")
-        (reports_dir / f"finding_{i:03d}_{check}.md").write_text(md)
+    not_reportable_dir = reports_dir / "not_reportable"
+    reportable_count = 0
+    ineligible_count = 0
 
-    print(f"[*] Draft report(s) written to {reports_dir}")
+    for i, finding in enumerate(all_findings):
+        check = finding.get("check", "unknown")
+
+        if check in POLICY_INELIGIBLE:
+            not_reportable_dir.mkdir(exist_ok=True)
+            md = report.render_report(finding, scope, platform=scope.platform)
+            md = f"> **NOT REPORTABLE per program policy:** {POLICY_INELIGIBLE[check]}\n\n" + md
+            (not_reportable_dir / f"finding_{i:03d}_{check}.md").write_text(md)
+            ineligible_count += 1
+            continue
+
+        md = report.render_report(finding, scope, platform=scope.platform)
+        if check in POLICY_CONDITIONAL:
+            md = f"> **VERIFY BEFORE SUBMITTING:** {POLICY_CONDITIONAL[check]}\n\n" + md
+        (reports_dir / f"finding_{i:03d}_{check}.md").write_text(md)
+        reportable_count += 1
+
+    print(f"[*] {reportable_count} draft report(s) written to {reports_dir}")
+    if ineligible_count:
+        print(
+            f"[*] {ineligible_count} finding(s) filed under {not_reportable_dir} "
+            "-- policy-ineligible, not worth submitting."
+        )
     print("[*] Review every draft manually before submitting anything to the program.")
     return 0
 
