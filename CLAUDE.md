@@ -20,6 +20,7 @@ Genesis/
 ├── openclaw_web.py        Flask web UI wrapping the same execute/read/write/system-info actions
 ├── setup_openclaw.sh      One-shot setup script: creates ~/.openclaw/, default config, launcher
 ├── emoji_hide.py          Standalone zero-width-character text steganography tool + tiny HTTP server
+├── pentest_openclaw.py    Loopback-only scanner that confirms openclaw_web.py's known findings
 ├── README.md              Main project overview and quick start
 ├── OPENCLAW_README.md     Full OpenClaw reference documentation
 ├── iPhone_SETUP.md        Step-by-step iSH/iPhone install walkthrough
@@ -72,6 +73,21 @@ Bash setup script (uses `set -e`) that: checks for `python3`, creates
 `~/.openclaw/{logs,config,scripts}`, writes a default `config.json`, offers to
 `pip3 install flask`, chmods the two `openclaw_*.py` scripts executable, and writes
 a `~/.openclaw/launch.sh` convenience wrapper (`launch.sh agent` / `launch.sh web`).
+
+### `pentest_openclaw.py`
+A scoped, self-test security scanner for `openclaw_web.py` — not a general-purpose
+exploitation tool. It refuses to run against anything but a loopback address
+(`127.0.0.1`/`localhost`/`::1`), uses only fixed benign proof-of-concept requests
+(e.g. `echo <random-marker>`, a scratch-file write/read under the OS temp dir that
+it deletes locally afterward) to confirm each known finding, and renders a Markdown
+report. Run it with `--start-server` to have it launch `openclaw_web.py` bound to
+127.0.0.1 for the duration of the scan and tear it down afterward:
+```bash
+python3 pentest_openclaw.py --start-server --target http://127.0.0.1:5099
+```
+If you extend this scanner, keep the same shape: hard-scope to loopback, use fixed
+non-destructive probes rather than accepting arbitrary commands/paths from the
+caller, and clean up anything it writes.
 
 ## Development workflow
 
