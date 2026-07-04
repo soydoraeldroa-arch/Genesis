@@ -20,7 +20,7 @@ import sys
 import time
 from pathlib import Path
 
-from modules import active, passive, recon, report
+from modules import active, passive, recon, report, secrets, takeover
 from modules.scope import ScopeError, is_in_scope, load_scope
 
 # Findings the X/xAI program's published policy explicitly lists as
@@ -114,10 +114,16 @@ def main() -> int:
             all_findings += passive.check_security_headers(base_url)
             all_findings += passive.check_sensitive_paths(base_url, delay=args.delay)
             all_findings += passive.check_cors(base_url)
+            all_findings += passive.check_cookie_flags(base_url)
+            all_findings += passive.check_graphql_introspection(base_url)
+            all_findings += secrets.scan_js_secrets(base_url)
 
             if args.active and host not in ACTIVE_CHECK_EXCLUDED_HOSTS:
                 all_findings += active.check_reflected_input(base_url)
                 all_findings += active.check_open_redirect(base_url)
+
+        # host-level (not per-scheme) check
+        all_findings += takeover.check_subdomain_takeover(host)
 
         time.sleep(args.delay)
 

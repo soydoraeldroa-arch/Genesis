@@ -70,6 +70,46 @@ _CHECK_COPY = {
         ),
         remediation="Validate redirect targets against an allow-list of known-safe destinations, or require relative paths only.",
     ),
+    "insecure_session_cookie": dict(
+        title="Session cookie '{cookie_name}' missing flags: {missing_flags}",
+        summary="The cookie '{cookie_name}' set by {url} is missing: {missing_flags}.",
+        impact=(
+            "Missing HttpOnly exposes the cookie to theft via XSS; missing Secure allows it to "
+            "leak over cleartext HTTP; missing SameSite widens CSRF exposure. Impact depends on "
+            "whether this cookie actually carries a session/auth value -- confirm that first."
+        ),
+        remediation="Set Secure, HttpOnly, and an appropriate SameSite value on all session/auth cookies.",
+    ),
+    "graphql_introspection_enabled": dict(
+        title="GraphQL introspection enabled at {url}",
+        summary="The GraphQL endpoint at {url} answered a schema introspection query in production.",
+        impact=(
+            "Introspection reveals the full API schema (types, queries, mutations), giving an "
+            "attacker a map of the attack surface. This is usually informational on its own -- "
+            "its value is as a lead toward an actual authz/data-exposure bug."
+        ),
+        remediation="Disable introspection in production, or gate it behind authentication.",
+    ),
+    "client_side_secret": dict(
+        title="Possible {secret_type} in client-side JavaScript",
+        summary="A string matching {secret_type} was found in {url} (preview: {match_preview}).",
+        impact=(
+            "If this is a live, sensitive credential shipped to the browser, anyone can extract "
+            "and abuse it. Many client-side keys are publishable by design, so this must be "
+            "manually confirmed as genuinely sensitive before it is a real finding."
+        ),
+        remediation="Move secrets server-side; rotate any exposed credential; use scoped/publishable keys client-side only.",
+    ),
+    "possible_subdomain_takeover": dict(
+        title="Possible subdomain takeover: {host} ({provider})",
+        summary="{host} appears to route to a de-provisioned {provider} resource (fingerprint: {fingerprint_matched}).",
+        impact=(
+            "If the DNS record dangles to an unclaimed resource, an attacker can claim it and "
+            "serve arbitrary content from a trusted subdomain -- enabling phishing, cookie theft "
+            "on parent-domain cookies, and OAuth redirect abuse."
+        ),
+        remediation="Remove the dangling DNS record, or re-claim the resource under your control.",
+    ),
 }
 
 
