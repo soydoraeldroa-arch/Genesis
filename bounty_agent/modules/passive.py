@@ -107,15 +107,47 @@ def check_cors(base_url: str, timeout: int = 8) -> list[dict]:
         return findings
 
     acao = r.headers.get("Access-Control-Allow-Origin")
-    acac = r.headers.get("Access-Control-Allow-Credentials")
-    if acao in (probe_origin, "*"):
-        findings.append({
-            "check": "cors_misconfiguration",
-            "url": base_url,
-            "access_control_allow_origin": acao,
-            "access_control_allow_credentials": acac,
-            "severity": "high" if acac == "true" else "medium",
-        })
+    acac = (r.headers.get("Access-Control-Allow-Credentials") or "").lower() == "true"
+    reflects_origin = acao == probe_origin
+    wildcard = acao == "*"
+
+    if not (reflects_origin or wildcard):
+        return findings
+
+    # The exploitability hinge: a reflected/wildcard ACAO only leaks *victim*
+    # data if credentials are also allowed. Without ACAC:true the browser
+    # blocks the attacker page from reading any credentialed response, so it's
+    # almost never a real finding (only matters if the endpoint is gated by
+    # network/IP rather than cookies -- rare, flagged as info to eyeball).
+    if reflects_origin and acac:
+        severity, note = "high", (
+            "Arbitrary origin reflected AND credentials allowed: a malicious "
+            "page can read this endpoint's response with the victim's session. "
+            "Confirm the endpoint returns authenticated/sensitive data."
+        )
+    elif wildcard and acac:
+        # Browsers actually reject '*' + credentials, but flag if a server
+        # claims it -- worth manual confirmation of real behavior.
+        severity, note = "medium", (
+            "Wildcard ACAO with credentials claimed; browsers reject this combo, "
+            "so verify the server's actual behavior before reporting."
+        )
+    else:
+        severity, note = "info", (
+            "Origin reflected but credentials are NOT allowed. Usually NOT "
+            "exploitable -- the attacker page cannot read credentialed responses. "
+            "Only matters if this endpoint is gated by network/IP instead of "
+            "cookies. Most likely a non-finding."
+        )
+
+    findings.append({
+        "check": "cors_misconfiguration",
+        "url": base_url,
+        "access_control_allow_origin": acao,
+        "access_control_allow_credentials": r.headers.get("Access-Control-Allow-Credentials"),
+        "severity": severity,
+        "note": note,
+    })
     return findings
 
 

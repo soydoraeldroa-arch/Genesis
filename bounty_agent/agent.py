@@ -146,6 +146,16 @@ def main() -> int:
             ineligible_count += 1
             continue
 
+        # Info-severity findings are leads to eyeball, not submittable drafts
+        # (e.g. reflected CORS origin without credentials -- usually no impact).
+        if finding.get("severity") == "info":
+            not_reportable_dir.mkdir(exist_ok=True)
+            md = report.render_report(finding, scope, platform=scope.platform)
+            md = "> **INFO / likely non-finding:** review as a lead; not submittable as-is.\n\n" + md
+            (not_reportable_dir / f"finding_{i:03d}_{check}.md").write_text(md)
+            ineligible_count += 1
+            continue
+
         md = report.render_report(finding, scope, platform=scope.platform)
         if check in POLICY_CONDITIONAL:
             md = f"> **VERIFY BEFORE SUBMITTING:** {POLICY_CONDITIONAL[check]}\n\n" + md
